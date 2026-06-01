@@ -11,11 +11,12 @@ const client = new BetaAnalyticsDataClient({
 })
 
 const propertyId = process.env.GA_PROPERTY_ID
+const gaDateRanges = [{ startDate: '30daysAgo', endDate: 'today' }]
 
 export async function getFirstUserChannel() {
   const [data] = await client.runReport({
     property: `properties/${propertyId}`,
-    dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+    dateRanges: gaDateRanges,
     dimensions: [{ name: 'firstUserDefaultChannelGroup' }],
     metrics: [{ name: 'totalUsers' }],
   })
@@ -28,7 +29,7 @@ export async function getFirstUserChannel() {
 export async function getPagePerformance() {
   const [data] = await client.runReport({
     property: `properties/${propertyId}`,
-    dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+    dateRanges: gaDateRanges,
     dimensions: [{ name: 'pagePath' }],
     metrics: [
       { name: 'screenPageViews' },
@@ -57,7 +58,7 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
   try {
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
-      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+      dateRanges: gaDateRanges,
       dimensions: [{ name: 'eventName' }],
       metrics: [{ name: 'eventCount' }],
       dimensionFilter: {
@@ -130,7 +131,7 @@ export async function getWaitingRageClickRate() {
   try {
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
-      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+      dateRanges: gaDateRanges,
       dimensions: [{ name: 'eventName' }, { name: 'customEvent:report_id' }],
       // eventCount 값은 사용하지 않고, eventName + report_id 조합의 존재 여부만 distinct 계산에 사용
       metrics: [{ name: 'eventCount' }],
