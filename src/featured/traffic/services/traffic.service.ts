@@ -148,7 +148,7 @@ export async function getRageClickRate() {
         filter: {
           fieldName: 'eventName',
           inListFilter: {
-            values: ['report_waiting_session', 'rage_click'],
+            values: ['report_waiting_session', 'report_waiting_rage_click'],
           },
         },
       },
@@ -168,7 +168,7 @@ export async function getRageClickRate() {
         waitingReportIds.add(reportId)
       }
 
-      if (eventName === 'rage_click') {
+      if (eventName === 'report_waiting_rage_click') {
         rageClickReportIds.add(reportId)
       }
     })
