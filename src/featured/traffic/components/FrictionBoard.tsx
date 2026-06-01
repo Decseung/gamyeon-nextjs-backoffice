@@ -79,7 +79,7 @@ export function FrictionBoard({ data }: FrictionBoardProps) {
                   className={`ml-3 flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-bold ${badgeClass}`}
                 >
                   <Icon className="h-3.5 w-3.5" aria-hidden="true" strokeWidth={2.5} />
-                  {stat.dropOffRate}% 이탈률
+                  {stat.dropOffRate}% {stat.rateLabel ?? '이탈률'}
                 </div>
               </motion.div>
             )
