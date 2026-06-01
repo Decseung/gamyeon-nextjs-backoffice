@@ -60,6 +60,7 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
       property: `properties/${propertyId}`,
       dateRanges: gaDateRanges,
       dimensions: [{ name: 'eventName' }],
+      // eventCount 숫자는 사용하지 않고, report_id가 해당 이벤트에 존재하는지만 확인
       metrics: [{ name: 'eventCount' }],
       dimensionFilter: {
         filter: {
@@ -100,6 +101,8 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
     const calcTabLeaveRate = (start: number, leaveCount: number) =>
       start > 0 ? Number(((leaveCount / start) * 100).toFixed(1)) : 0
 
+    const rageClickRate = await getRageClickRate()
+
     const rankings: FrictionRanking[] = [
       {
         id: 1,
@@ -116,7 +119,13 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
         title: '리포트 대기 중 화면 이탈',
         dropOffRate: calcTabLeaveRate(counts.report_gen_start, counts.loading_tab_leave),
       },
-      // 나중에 초단기 이탈(id: 4), 분노의 클릭(id: 5)도 추가 예정
+      {
+        id: 4,
+        title: '리포트 대기중 분노의 클릭',
+        dropOffRate: rageClickRate,
+        rateLabel: '마찰률',
+      },
+      // 나중에 초단기 이탈(id: 5)도 추가 예정
     ]
 
     return rankings.sort((a, b) => b.dropOffRate - a.dropOffRate).slice(0, 3)
@@ -127,7 +136,8 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
   }
 }
 
-export async function getWaitingRageClickRate() {
+// 대기 구간에서의 분노의 클릭률 계산 함수 추가
+export async function getRageClickRate() {
   try {
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
