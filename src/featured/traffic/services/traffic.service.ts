@@ -120,7 +120,7 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
       },
       {
         id: 4,
-        title: '리포트 대기중 분노의 클릭',
+        title: '리포트 대기 중 분노의 클릭',
         dropOffRate: rageClickRate,
         rateLabel: '마찰률',
       },
