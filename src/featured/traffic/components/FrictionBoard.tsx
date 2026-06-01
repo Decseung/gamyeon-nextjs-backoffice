@@ -15,6 +15,7 @@ const getUxDesc = (title: string) => {
   if (title.includes('리포트 분석'))
     return '분석 중 화면이 멈춘 것으로 오해하여 새로고침 또는 이탈 발생'
   if (title.includes('화면 이탈')) return '대기 시간이 길어 지루함을 느끼고 다른 탭으로 시선을 돌림'
+  if (title.includes('분노의 클릭')) return 'AI 리포트 발행 대기 중 반복 클릭이 발생'
   return '화면 대기 중 사용자가 피로도를 느껴 이탈했습니다.'
 }
 
