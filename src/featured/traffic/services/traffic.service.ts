@@ -69,6 +69,7 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
               'question_gen_complete',
               'report_gen_start',
               'report_gen_complete',
+              'loading_tab_leave',
             ],
           },
         },
@@ -80,6 +81,7 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
       question_gen_complete: 0,
       report_gen_start: 0,
       report_gen_complete: 0,
+      loading_tab_leave: 0,
     }
 
     response.rows?.forEach((row) => {
@@ -89,8 +91,13 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
       }
     })
 
+    // 기존 계산식 (시작 대비 완료율로 이탈 계산)
     const calcDropOff = (start: number, complete: number) =>
       start > 0 ? Number((((start - complete) / start) * 100).toFixed(1)) : 0
+
+    // 탭 이탈률 계산 추가 (탭 나간 수 / 전체 로딩 시작 수)
+    const calcTabLeaveRate = (start: number, leaveCount: number) =>
+      start > 0 ? Number(((leaveCount / start) * 100).toFixed(1)) : 0
 
     const rankings: FrictionRanking[] = [
       {
@@ -103,9 +110,15 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
         title: '면접 후 AI 리포트 분석',
         dropOffRate: calcDropOff(counts.report_gen_start, counts.report_gen_complete),
       },
+      {
+        id: 3,
+        title: '리포트 대기 중 화면 이탈',
+        dropOffRate: calcTabLeaveRate(counts.report_gen_start, counts.loading_tab_leave),
+      },
+      // 나중에 초단기 이탈(id: 4), 분노의 클릭(id: 5)도 추가 예정
     ]
 
-    return rankings.sort((a, b) => b.dropOffRate - a.dropOffRate)
+    return rankings.sort((a, b) => b.dropOffRate - a.dropOffRate).slice(0, 3)
   } catch (error) {
     // 3. 에러 발생 시 로그를 남기고 빈 배열을 반환해 UI 렌더링 중단을 방지합니다
     console.error('GA4 마찰 지수 데이터 호출 에러:', error)

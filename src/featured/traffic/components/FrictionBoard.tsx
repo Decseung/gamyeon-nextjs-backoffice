@@ -14,6 +14,7 @@ const getUxDesc = (title: string) => {
   if (title.includes('질문 생성')) return '질문 생성 대기 중 지루함을 느껴 뒤로가기 또는 이탈 발생'
   if (title.includes('리포트 분석'))
     return '분석 중 화면이 멈춘 것으로 오해하여 새로고침 또는 이탈 발생'
+  if (title.includes('화면 이탈')) return '대기 시간이 길어 지루함을 느끼고 다른 탭으로 시선을 돌림'
   return '화면 대기 중 사용자가 피로도를 느껴 이탈했습니다.'
 }
 
@@ -22,10 +23,9 @@ export function FrictionBoard({ data }: FrictionBoardProps) {
     <div className="border-border bg-card flex h-full flex-col rounded-2xl border p-6">
       {/* 헤더 영역 */}
       <div className="mb-6 shrink-0">
-        <h2 className="text-foreground text-xl font-bold">UX 마찰 랭킹 리스트</h2>
+        <h2 className="text-foreground text-xl font-bold">AI 대기 구간 유저 마찰 지표 Top 3 </h2>
         <p className="text-muted-foreground mt-1.5 text-sm break-keep">
-          가장 마찰(이탈)이 심한 화면을 순위제로 노출하여, 다음 스프린트의 최우선 해결 과제로
-          삼습니다.
+          가장 이탈이 심한 화면을 순위로 노출하여, 다음 스프린트의 최우선 해결 과제로 삼습니다.
         </p>
       </div>
 
