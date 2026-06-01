@@ -125,3 +125,48 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
     return []
   }
 }
+
+export async function getWaitingRageClickRate() {
+  const [response] = await client.runReport({
+    property: `properties/${propertyId}`,
+    dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+    dimensions: [{ name: 'eventName' }, { name: 'customEvent:report_id' }],
+    // eventCount 값은 사용하지 않고, eventName + report_id 조합의 존재 여부만 distinct 계산에 사용
+    metrics: [{ name: 'eventCount' }],
+    dimensionFilter: {
+      filter: {
+        fieldName: 'eventName',
+        inListFilter: {
+          values: ['report_waiting_session', 'rage_click'],
+        },
+      },
+    },
+    limit: 10000,
+  })
+
+  const waitingReportIds = new Set<string>()
+  const rageClickReportIds = new Set<string>()
+
+  response.rows?.forEach((row) => {
+    const eventName = row.dimensionValues?.[0].value
+    const reportId = row.dimensionValues?.[1].value
+
+    if (!reportId || reportId === '(not set)') return
+
+    if (eventName === 'report_waiting_session') {
+      waitingReportIds.add(reportId)
+    }
+
+    if (eventName === 'rage_click') {
+      rageClickReportIds.add(reportId)
+    }
+  })
+
+  const rageClickedWaitingReportCount = [...waitingReportIds].filter((reportId) =>
+    rageClickReportIds.has(reportId),
+  ).length
+
+  return waitingReportIds.size > 0
+    ? Number(((rageClickedWaitingReportCount / waitingReportIds.size) * 100).toFixed(1))
+    : 0
+}
