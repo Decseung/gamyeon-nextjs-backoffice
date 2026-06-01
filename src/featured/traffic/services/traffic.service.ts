@@ -60,7 +60,6 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
       property: `properties/${propertyId}`,
       dateRanges: gaDateRanges,
       dimensions: [{ name: 'eventName' }],
-      // eventCount 숫자는 사용하지 않고, report_id가 해당 이벤트에 존재하는지만 확인
       metrics: [{ name: 'eventCount' }],
       dimensionFilter: {
         filter: {
@@ -136,7 +135,7 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
   }
 }
 
-// 대기 구간에서의 분노의 클릭률 계산 함수 추가
+// AI 리포트 대기 report_id 중 분노의 클릭이 발생한 report_id 비율 계산
 export async function getRageClickRate() {
   try {
     const [response] = await client.runReport({
