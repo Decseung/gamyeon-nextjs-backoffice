@@ -100,7 +100,7 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
     const calcTabLeaveRate = (start: number, leaveCount: number) =>
       start > 0 ? Number(((leaveCount / start) * 100).toFixed(1)) : 0
 
-    const rageClickRate = await getRageClickRate()
+    const rageClickRate = await getRageClickFrictionRate()
 
     const rankings: FrictionRanking[] = [
       {
@@ -136,7 +136,7 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
 }
 
 // AI 리포트 대기 report_id 중 분노의 클릭이 발생한 report_id 비율 계산
-export async function getRageClickRate() {
+export async function getRageClickFrictionRate() {
   try {
     const [response] = await client.runReport({
       property: `properties/${propertyId}`,
