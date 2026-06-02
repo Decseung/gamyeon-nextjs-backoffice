@@ -11,11 +11,14 @@ const client = new BetaAnalyticsDataClient({
 })
 
 const propertyId = process.env.GA_PROPERTY_ID
+const gaDateRanges = [{ startDate: '30daysAgo', endDate: 'today' }]
+// report_id별 이벤트 존재 여부를 계산하기 위해 충분히 넉넉한 row 수로 조회
+const GA_REPORT_ROW_LIMIT = 10000
 
 export async function getFirstUserChannel() {
   const [data] = await client.runReport({
     property: `properties/${propertyId}`,
-    dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+    dateRanges: gaDateRanges,
     dimensions: [{ name: 'firstUserDefaultChannelGroup' }],
     metrics: [{ name: 'totalUsers' }],
   })
@@ -28,7 +31,7 @@ export async function getFirstUserChannel() {
 export async function getPagePerformance() {
   const [data] = await client.runReport({
     property: `properties/${propertyId}`,
-    dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+    dateRanges: gaDateRanges,
     dimensions: [{ name: 'pagePath' }],
     metrics: [
       { name: 'screenPageViews' },
@@ -55,26 +58,32 @@ export async function getPagePerformance() {
 // 이탈 랭킹 서비스 함수 추가 - GA4 이벤트 데이터를 기반으로 마찰 지수 계산
 export async function getFrictionIndex(): Promise<FrictionRanking[]> {
   try {
-    const [response] = await client.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-      dimensions: [{ name: 'eventName' }],
-      metrics: [{ name: 'eventCount' }],
-      dimensionFilter: {
-        filter: {
-          fieldName: 'eventName',
-          inListFilter: {
-            values: [
-              'question_gen_start',
-              'question_gen_complete',
-              'report_gen_start',
-              'report_gen_complete',
-              'loading_tab_leave',
-            ],
+    const [
+      [response], // client.runReport 결과 배열에서 response 꺼냄
+      rageClickRate, // getRageClickFrictionRate 결과 숫자
+    ] = await Promise.all([
+      client.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: gaDateRanges,
+        dimensions: [{ name: 'eventName' }],
+        metrics: [{ name: 'eventCount' }],
+        dimensionFilter: {
+          filter: {
+            fieldName: 'eventName',
+            inListFilter: {
+              values: [
+                'question_gen_start',
+                'question_gen_complete',
+                'report_gen_start',
+                'report_gen_complete',
+                'loading_tab_leave',
+              ],
+            },
           },
         },
-      },
-    })
+      }),
+      getRageClickFrictionRate(),
+    ])
 
     const counts = {
       question_gen_start: 0,
@@ -115,7 +124,13 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
         title: '리포트 대기 중 화면 이탈',
         dropOffRate: calcTabLeaveRate(counts.report_gen_start, counts.loading_tab_leave),
       },
-      // 나중에 초단기 이탈(id: 4), 분노의 클릭(id: 5)도 추가 예정
+      {
+        id: 4,
+        title: '리포트 대기 중 분노의 클릭',
+        dropOffRate: rageClickRate,
+        rateLabel: '마찰률',
+      },
+      // 나중에 초단기 이탈(id: 5)도 추가 예정
     ]
 
     return rankings.sort((a, b) => b.dropOffRate - a.dropOffRate).slice(0, 3)
@@ -123,5 +138,57 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
     // 3. 에러 발생 시 로그를 남기고 빈 배열을 반환해 UI 렌더링 중단을 방지합니다
     console.error('GA4 마찰 지수 데이터 호출 에러:', error)
     return []
+  }
+}
+
+// AI 리포트 대기 report_id 중 분노의 클릭이 발생한 report_id 비율 계산
+export async function getRageClickFrictionRate() {
+  try {
+    const [response] = await client.runReport({
+      property: `properties/${propertyId}`,
+      dateRanges: gaDateRanges,
+      dimensions: [{ name: 'eventName' }, { name: 'customEvent:report_id' }],
+      // eventCount 값은 사용하지 않고, eventName + report_id 조합의 존재 여부만 distinct 계산에 사용
+      metrics: [{ name: 'eventCount' }],
+      dimensionFilter: {
+        filter: {
+          fieldName: 'eventName',
+          inListFilter: {
+            values: ['report_waiting_session', 'report_waiting_rage_click'],
+          },
+        },
+      },
+      // eventName + report_id 조합 row를 최대 10,000개까지 조회해 distinct report_id 계산 누락을 줄임
+      limit: GA_REPORT_ROW_LIMIT,
+    })
+
+    const waitingReportIds = new Set<string>()
+    const rageClickReportIds = new Set<string>()
+
+    response.rows?.forEach((row) => {
+      const eventName = row.dimensionValues?.[0].value
+      const reportId = row.dimensionValues?.[1].value
+
+      if (!reportId || reportId === '(not set)') return
+
+      if (eventName === 'report_waiting_session') {
+        waitingReportIds.add(reportId)
+      }
+
+      if (eventName === 'report_waiting_rage_click') {
+        rageClickReportIds.add(reportId)
+      }
+    })
+
+    const rageClickedWaitingReportCount = [...waitingReportIds].filter((reportId) =>
+      rageClickReportIds.has(reportId),
+    ).length
+
+    return waitingReportIds.size > 0
+      ? Number(((rageClickedWaitingReportCount / waitingReportIds.size) * 100).toFixed(1))
+      : 0
+  } catch (error) {
+    console.error('GA4 리포트 대기 분노의클릭 마찰률 데이터 호출 에러:', error)
+    return 0
   }
 }
