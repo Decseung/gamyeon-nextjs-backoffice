@@ -156,6 +156,7 @@ export async function getRageClickFrictionRate() {
           },
         },
       },
+      // eventName + report_id 조합 row를 최대 10,000개까지 조회해 distinct report_id 계산 누락을 줄임
       limit: 10000,
     })
 
