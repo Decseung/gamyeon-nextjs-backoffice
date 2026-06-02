@@ -12,6 +12,8 @@ const client = new BetaAnalyticsDataClient({
 
 const propertyId = process.env.GA_PROPERTY_ID
 const gaDateRanges = [{ startDate: '30daysAgo', endDate: 'today' }]
+// report_id별 이벤트 존재 여부를 계산하기 위해 충분히 넉넉한 row 수로 조회
+const GA_REPORT_ROW_LIMIT = 10000
 
 export async function getFirstUserChannel() {
   const [data] = await client.runReport({
@@ -157,7 +159,7 @@ export async function getRageClickFrictionRate() {
         },
       },
       // eventName + report_id 조합 row를 최대 10,000개까지 조회해 distinct report_id 계산 누락을 줄임
-      limit: 10000,
+      limit: GA_REPORT_ROW_LIMIT,
     })
 
     const waitingReportIds = new Set<string>()
