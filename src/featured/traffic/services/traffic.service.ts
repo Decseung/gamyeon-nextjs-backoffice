@@ -56,26 +56,32 @@ export async function getPagePerformance() {
 // 이탈 랭킹 서비스 함수 추가 - GA4 이벤트 데이터를 기반으로 마찰 지수 계산
 export async function getFrictionIndex(): Promise<FrictionRanking[]> {
   try {
-    const [response] = await client.runReport({
-      property: `properties/${propertyId}`,
-      dateRanges: gaDateRanges,
-      dimensions: [{ name: 'eventName' }],
-      metrics: [{ name: 'eventCount' }],
-      dimensionFilter: {
-        filter: {
-          fieldName: 'eventName',
-          inListFilter: {
-            values: [
-              'question_gen_start',
-              'question_gen_complete',
-              'report_gen_start',
-              'report_gen_complete',
-              'loading_tab_leave',
-            ],
+    const [
+      [response], // client.runReport 결과 배열에서 response 꺼냄
+      rageClickRate, // getRageClickFrictionRate 결과 숫자
+    ] = await Promise.all([
+      client.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: gaDateRanges,
+        dimensions: [{ name: 'eventName' }],
+        metrics: [{ name: 'eventCount' }],
+        dimensionFilter: {
+          filter: {
+            fieldName: 'eventName',
+            inListFilter: {
+              values: [
+                'question_gen_start',
+                'question_gen_complete',
+                'report_gen_start',
+                'report_gen_complete',
+                'loading_tab_leave',
+              ],
+            },
           },
         },
-      },
-    })
+      }),
+      getRageClickFrictionRate(),
+    ])
 
     const counts = {
       question_gen_start: 0,
@@ -99,8 +105,6 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
     // 탭 이탈률 계산 추가 (탭 나간 수 / 전체 로딩 시작 수)
     const calcTabLeaveRate = (start: number, leaveCount: number) =>
       start > 0 ? Number(((leaveCount / start) * 100).toFixed(1)) : 0
-
-    const rageClickRate = await getRageClickFrictionRate()
 
     const rankings: FrictionRanking[] = [
       {
