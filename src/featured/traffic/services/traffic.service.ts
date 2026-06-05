@@ -141,7 +141,7 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
                 'question_gen_complete',
                 'report_gen_start',
                 'report_gen_complete',
-                'loading_tab_leave',
+                'report_waiting_hidden',
               ],
             },
           },
@@ -155,7 +155,7 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
       question_gen_complete: 0,
       report_gen_start: 0,
       report_gen_complete: 0,
-      loading_tab_leave: 0,
+      report_waiting_hidden: 0,
     }
 
     response.rows?.forEach((row) => {
@@ -169,9 +169,10 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
     const calcDropOff = (start: number, complete: number) =>
       start > 0 ? Number((((start - complete) / start) * 100).toFixed(1)) : 0
 
-    // 탭 이탈률 계산 추가 (탭 나간 수 / 전체 로딩 시작 수)
-    const calcTabLeaveRate = (start: number, leaveCount: number) =>
-      start > 0 ? Number(((leaveCount / start) * 100).toFixed(1)) : 0
+    // report_waiting_hidden은 리포트 대기 카드 노출 중 document.hidden === true가 된 경우 수집된다.
+    // 탭 전환, 앱 전환, 창 최소화, 화면 잠금 등으로 대기 화면이 background 상태가 된 경우를 포함한다.
+    const calcWaitingHiddenRate = (start: number, hiddenCount: number) =>
+      start > 0 ? Number(((hiddenCount / start) * 100).toFixed(1)) : 0
 
     const rankings: FrictionRanking[] = [
       {
@@ -186,8 +187,8 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
       },
       {
         id: 3,
-        title: '리포트 대기 중 화면 이탈',
-        dropOffRate: calcTabLeaveRate(counts.report_gen_start, counts.loading_tab_leave),
+        title: '리포트 대기 중 화면 비활성화',
+        dropOffRate: calcWaitingHiddenRate(counts.report_gen_start, counts.report_waiting_hidden),
       },
       {
         id: 4,
