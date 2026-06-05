@@ -3,16 +3,18 @@ import {
   getFirstUserChannel,
   getPagePerformance,
   getFrictionIndex,
+  getSurvivalRate,
 } from '@/featured/traffic/services/traffic.service'
 import { PageHeader } from '@/shared/components/PageHeader'
 
-// src/app/(admin)/traffic/page.tsx
 export default async function TrafficPage() {
-  const [firstChannelResult, pagePerformanceResult, frictionIndexResult] = await Promise.all([
-    getFirstUserChannel(),
-    getPagePerformance(),
-    getFrictionIndex(),
-  ])
+  const [firstChannelResult, pagePerformanceResult, frictionIndexResult, survivalRateResult] =
+    await Promise.all([
+      getFirstUserChannel(),
+      getPagePerformance(),
+      getFrictionIndex(),
+      getSurvivalRate(),
+    ])
 
   console.log('이탈률 데이터:', frictionIndexResult)
 
@@ -27,6 +29,7 @@ export default async function TrafficPage() {
             pagePath: row.pagePath ?? '',
           }))}
           frictionIndexResult={frictionIndexResult ?? []}
+          survivalRateResult={survivalRateResult ?? []}
         />
       </div>
     </div>
