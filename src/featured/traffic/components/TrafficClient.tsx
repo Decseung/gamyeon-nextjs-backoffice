@@ -1,10 +1,14 @@
 'use client'
 
 import { ChannelPerformanceTabs } from '@/featured/traffic/components/ChannelPerformanceTabs'
-import type { ChannelData, EventCountData, PagePerformanceData } from '@/featured/traffic/types'
+import type {
+  ChannelData,
+  EventCountData,
+  FrictionRanking,
+  PagePerformanceData,
+} from '@/featured/traffic/types'
 import { FrictionBoard } from '@/featured/traffic/components/FrictionBoard'
 import { SurvivalRateChart } from '@/featured/traffic/components/SurvivalRateChart'
-import { FrictionRanking } from '../types/index'
 
 interface TrafficClientProps {
   firstChannelResult: ChannelData[]

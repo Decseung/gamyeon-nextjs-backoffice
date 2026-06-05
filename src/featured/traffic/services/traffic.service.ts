@@ -96,20 +96,19 @@ export async function getSurvivalRate(): Promise<EventCountData[]> {
         }
       }) || []
 
-    const totalCount = cleanedRows.reduce((sum, row) => {
-      return sum + Number(row.metricValues?.[0].value ?? 0)
-    }, 0)
+    const aggregated = cleanedRows.reduce<Record<string, number>>((acc, row) => {
+      const eventName = row.dimensionValues?.[0].value ?? 'unknown'
+      acc[eventName] = (acc[eventName] ?? 0) + Number(row.metricValues?.[0].value ?? 0)
+      return acc
+    }, {})
 
-    const formattedRows = cleanedRows.map((row) => {
-      const eventCount = Number(row.metricValues?.[0].value ?? 0)
-      const percentage = totalCount > 0 ? Number(((eventCount / totalCount) * 100).toFixed(1)) : 0
+    const totalCount = Object.values(aggregated).reduce((sum, count) => sum + count, 0)
 
-      return {
-        eventName: row.dimensionValues?.[0].value ?? 'unknown',
-        eventCount,
-        percentage,
-      }
-    })
+    const formattedRows = Object.entries(aggregated).map(([eventName, eventCount]) => ({
+      eventName,
+      eventCount,
+      percentage: totalCount > 0 ? Number(((eventCount / totalCount) * 100).toFixed(1)) : 0,
+    }))
     if (formattedRows.length > 0) {
       console.log('[GA4-API] 각 이벤트별 비중 분석 데이터:')
       console.table(formattedRows)
