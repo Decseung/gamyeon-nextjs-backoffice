@@ -20,21 +20,26 @@ export function TrafficClient({
   survivalRateResult,
 }: TrafficClientProps) {
   return (
-    <div className="mt-4 grid h-full grid-cols-2 grid-rows-2 gap-5 px-4">
-      <div className="">
-        {/* 유입 채널, 페이지별 성과 */}
-        <ChannelPerformanceTabs
-          channelData={firstChannelResult}
-          performanceData={pagePerformanceResult}
-        />
+    <div className="mt-4 flex h-full flex-col gap-5 px-4">
+      <div className="flex flex-1 gap-5">
+        <div className="flex-1">
+          {/* 유입 채널, 페이지별 성과 */}
+          <ChannelPerformanceTabs
+            channelData={firstChannelResult}
+            performanceData={pagePerformanceResult}
+          />
+        </div>
+        <div className="flex-1">
+          {/* UX 마찰 랭킹 리스트 */}
+          <FrictionBoard data={frictionIndexResult} />
+        </div>
       </div>
-      <div className="row-span-2">
-        {/* 단계별 생존율 */}
-        <SurvivalRateChart data={survivalRateResult} />
-      </div>
-      <div className="">
-        {/* UX 마찰 랭킹 리스트 */}
-        <FrictionBoard data={frictionIndexResult} />
+      <div className="flex flex-1 gap-5">
+        <div className="flex-1">
+          {/* 단계별 생존율 */}
+          <SurvivalRateChart data={survivalRateResult} />
+        </div>
+        <div className="flex-1" />
       </div>
     </div>
   )
