@@ -52,7 +52,7 @@ export async function getPagePerformance() {
   }))
 }
 
-export async function getEventCount() {
+export async function getSurvivalRate() {
   const [data] = await client.runReport({
     property: `properties/${propertyId}`,
     dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
