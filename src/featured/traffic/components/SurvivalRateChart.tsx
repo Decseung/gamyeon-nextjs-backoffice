@@ -28,18 +28,21 @@ const STEP_MAP: { eventName: string; label: string }[] = [
 
 function getStepColor(rate: number): string {
   if (rate >= 80) return 'oklch(0.55 0.15 180)'
-  if (rate >= 60) return 'oklch(0.60 0.15 180)'
-  if (rate >= 40) return 'oklch(0.72 0.18 150)'
-  return 'oklch(0.62 0.15 25)'
+  if (rate >= 60) return '#22c55e'
+  if (rate >= 40) return '#eab308'
+  return '#ef4444'
 }
 
 type ChartRow = { step: string; count: number; rate: number; previousRate?: number }
 
-function CustomTooltip({ active, payload }: { active?: boolean; payload?: any[] }) {
+interface TooltipPayloadItem {
+  payload: ChartRow
+}
+
+function CustomTooltip({ active, payload }: { active?: boolean; payload?: TooltipPayloadItem[] }) {
   if (!active || !payload?.length) return null
-  const data = payload[0].payload as ChartRow
+  const data = payload[0].payload
   const dropRate = data.previousRate != null ? +(data.previousRate - data.rate).toFixed(1) : 0
-  console.log(`data.count!!!: `, data)
   return (
     <div className="bg-background border-border rounded-lg border p-3 text-sm shadow-md">
       <p className="font-semibold">{data.step} 단계</p>
@@ -93,7 +96,7 @@ export function SurvivalRateChart({ data }: SurvivalRateChartProps) {
       className="flex h-full w-full"
       suppressHydrationWarning
     >
-      <Card className="border-border/60 h-full w-full">
+      <Card className="border-border/60 w-full">
         <CardHeader className="px-5 pt-4 pb-2">
           <div className="flex items-center justify-between">
             <div>
@@ -108,49 +111,41 @@ export function SurvivalRateChart({ data }: SurvivalRateChartProps) {
           </div>
         </CardHeader>
         <CardContent className="px-5 pt-0 pb-4">
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart
-              data={chartData}
-              layout="vertical"
-              margin={{ top: 0, right: 48, left: 8, bottom: 0 }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                horizontal={false}
-                stroke="oklch(0.91 0.01 180)"
-              />
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={chartData} margin={{ top: 16, right: 8, left: 8, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="oklch(0.91 0.01 180)" />
               <XAxis
+                type="category"
+                dataKey="step"
+                tick={{ fontSize: 11, fill: 'oklch(0.4 0.02 180)' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
                 type="number"
                 domain={[0, 100]}
                 tickFormatter={(value) => `${value}%`}
                 tick={{ fontSize: 11, fill: 'oklch(0.55 0.02 180)' }}
                 axisLine={false}
                 tickLine={false}
-              />
-              <YAxis
-                type="category"
-                dataKey="step"
-                tick={{ fontSize: 12, fill: 'oklch(0.4 0.02 180)' }}
-                axisLine={false}
-                tickLine={false}
-                width={80}
+                width={36}
               />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'oklch(0.96 0.01 180)' }} />
-              <Bar dataKey="rate" radius={[0, 4, 4, 0]} maxBarSize={40}>
+              <Bar dataKey="rate" radius={[4, 4, 0, 0]} maxBarSize={56}>
                 {chartData.map((entry, index) => (
                   <Cell key={index} fill={getStepColor(entry.rate)} />
                 ))}
                 <LabelList
                   dataKey="rate"
-                  position="right"
+                  position="top"
                   formatter={(value: number) => `${value}%`}
-                  style={{ fontSize: 12, fontWeight: 600, fill: 'oklch(0.4 0.02 180)' }}
+                  style={{ fontSize: 11, fontWeight: 600, fill: 'oklch(0.4 0.02 180)' }}
                 />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
           {worstDrop && (
-            <div className="bg-secondary mt-3 flex items-start gap-2 rounded-lg px-3 py-2.5">
+            <div className="bg-secondary mt-3 flex shrink-0 items-start gap-2 rounded-lg px-3 py-2.5">
               <span className="text-sm leading-none">💡</span>
               <p className="text-secondary-foreground text-xs">
                 <strong>인사이트:</strong> {worstDrop.step} 구간에서 이탈률이{' '}
