@@ -86,7 +86,7 @@ export async function getSurvivalRate(): Promise<EventCountData[]> {
     data.rows?.forEach((row) => {
       const eventName = row.dimensionValues?.[0].value ?? 'unknown'
       const questionNum = row.dimensionValues?.[1].value ?? 'unknown'
-      let rawValue = Number(row.metricValues?.[0].value ?? 0)
+      const rawValue = Number(row.metricValues?.[0].value ?? 0)
 
       const uniqueKey =
         eventName === 'complete_answer' && questionNum !== '(not set)'
