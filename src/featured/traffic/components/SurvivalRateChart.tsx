@@ -23,6 +23,13 @@ const STEP_MAP: { eventName: string; label: string }[] = [
   { eventName: 'request_cam_permission', label: '카메라 권한' },
   { eventName: 'request_mic_permission', label: '마이크 권한' },
   { eventName: 'start_interview', label: '인터뷰 시작' },
+  { eventName: 'complete_answer-1', label: '1번질문 답변' },
+  { eventName: 'complete_answer-2', label: '2번질문 답변' },
+  { eventName: 'complete_answer-3', label: '3번질문 답변' },
+  { eventName: 'complete_answer-4', label: '4번질문 답변' },
+  { eventName: 'complete_answer-5', label: '5번질문 답변' },
+  { eventName: 'complete_answer-6', label: '6번질문 답변' },
+  { eventName: 'complete_answer-7', label: '7번질문 답변' },
   { eventName: 'complete_interview', label: '인터뷰 종료' },
 ]
 
