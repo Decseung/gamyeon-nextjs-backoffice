@@ -59,7 +59,7 @@ export async function getSurvivalRate(): Promise<EventCountData[]> {
   try {
     const [data] = await client.runReport({
       property: `properties/${propertyId}`,
-      dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+      dateRanges: [{ startDate: '5daysAgo', endDate: 'today' }],
       dimensions: [{ name: 'eventName' }, { name: 'customEvent:question_number' }],
       metrics: [{ name: 'eventCount' }],
       dimensionFilter: {
@@ -74,7 +74,7 @@ export async function getSurvivalRate(): Promise<EventCountData[]> {
               'request_cam_permission', // setup - 3단계
               'request_mic_permission', // setup - 4단계
               'start_interview', // interview - 인터뷰 시작
-              // 'complete_answer',
+              'complete_answer', // interview - 질문 답변
               'complete_interview', // interview - 인터뷰 종료
             ],
           },
@@ -82,43 +82,36 @@ export async function getSurvivalRate(): Promise<EventCountData[]> {
       },
     })
 
-    const cleanedRows =
-      data.rows?.map((row) => {
-        const eventName = row.dimensionValues?.[0].value ?? 'unknown'
-        let rawValue = Number(row.metricValues?.[0].value ?? 0)
-
-        if (eventName === 'enter_upload_step') {
-          rawValue = Math.floor(rawValue / 2)
-        }
-        return {
-          ...row,
-          metricValues: [{ value: String(rawValue) }],
-        }
-      }) || []
-
-    const aggregated = cleanedRows.reduce<Record<string, number>>((acc, row) => {
+    const aggregatedMap = new Map<string, number>()
+    data.rows?.forEach((row) => {
       const eventName = row.dimensionValues?.[0].value ?? 'unknown'
-      acc[eventName] = (acc[eventName] ?? 0) + Number(row.metricValues?.[0].value ?? 0)
-      return acc
-    }, {})
+      const questionNum = row.dimensionValues?.[1].value ?? 'unknown'
+      const rawValue = Number(row.metricValues?.[0].value ?? 0)
 
-    const totalCount = Object.values(aggregated).reduce((sum, count) => sum + count, 0)
+      const uniqueKey =
+        eventName === 'complete_answer' && questionNum !== '(not set)'
+          ? `${eventName}-${questionNum}`
+          : eventName
+      const valueSum = aggregatedMap.get(uniqueKey) || 0
+      aggregatedMap.set(uniqueKey, valueSum + rawValue)
+    })
 
-    const formattedRows = Object.entries(aggregated).map(([eventName, eventCount]) => ({
+    const totalCount = Array.from(aggregatedMap.values()).reduce((acc, cur) => acc + cur, 0)
+    const formattedRows = Array.from(aggregatedMap.entries()).map(([eventName, eventCount]) => ({
       eventName,
       eventCount,
       percentage: totalCount > 0 ? Number(((eventCount / totalCount) * 100).toFixed(1)) : 0,
     }))
     if (formattedRows.length > 0) {
-      console.log('[GA4-API] 각 이벤트별 비중 분석 데이터:')
+      console.log('[GA4-API] 이벤트 단계별 생존율 데이터')
       console.table(formattedRows)
     } else {
       console.log('[GA4-API] 기간 내에 수집된 데이터가 없습니다.')
     }
     return formattedRows
   } catch (error) {
-    console.error('GA4 생존율 데이터 호출 에러:', error)
-    return []
+    console.error('GA4 단계별 생존율 데이터 호출 에러:', error)
+    return [] as EventCountData[]
   }
 }
 
