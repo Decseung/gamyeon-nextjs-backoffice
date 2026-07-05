@@ -153,6 +153,8 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
       report_gen_start: 0,
       report_gen_complete: 0,
       report_waiting_hidden: 0,
+      report_waiting_session: 0,
+      report_waiting_early_exit: 0,
     }
 
     response.rows?.forEach((row) => {
