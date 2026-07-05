@@ -137,6 +137,8 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
                 'report_gen_start',
                 'report_gen_complete',
                 'report_waiting_hidden',
+                'report_waiting_session',
+                'report_waiting_early_exit',
               ],
             },
           },
