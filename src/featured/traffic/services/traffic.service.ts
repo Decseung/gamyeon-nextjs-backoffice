@@ -173,6 +173,12 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
     const calcWaitingHiddenRate = (start: number, hiddenCount: number) =>
       start > 0 ? Number(((hiddenCount / start) * 100).toFixed(1)) : 0
 
+    const calcWaitingEarlyExitRate = (waitingSessionCount: number, earlyExitCount: number) => {
+      if (!waitingSessionCount) return 0
+
+      return Number(((earlyExitCount / waitingSessionCount) * 100).toFixed(1))
+    }
+
     const rankings: FrictionRanking[] = [
       {
         id: 1,
