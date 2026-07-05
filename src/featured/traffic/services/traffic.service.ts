@@ -201,7 +201,15 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
         dropOffRate: rageClickRate,
         rateLabel: '마찰률',
       },
-      // 나중에 초단기 이탈(id: 5)도 추가 예정
+      {
+        id: 5,
+        title: '리포트 대기 중 초단기 이탈',
+        dropOffRate: calcWaitingEarlyExitRate(
+          counts.report_waiting_session,
+          counts.report_waiting_early_exit,
+        ),
+        rateLabel: '이탈률',
+      },
     ]
 
     return rankings.sort((a, b) => b.dropOffRate - a.dropOffRate).slice(0, 3)
