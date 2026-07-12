@@ -159,8 +159,9 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
 
     response.rows?.forEach((row) => {
       const eventName = row.dimensionValues?.[0].value as keyof typeof counts
+
       if (counts[eventName] !== undefined) {
-        counts[eventName] = Number(row.metricValues?.[0].value)
+        counts[eventName] = Number(row.metricValues?.[0].value ?? 0)
       }
     })
 
