@@ -168,16 +168,20 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
     const calcDropOff = (start: number, complete: number) =>
       start > 0 ? Number((((start - complete) / start) * 100).toFixed(1)) : 0
 
+    const calcRate = (totalCount: number, targetCount: number) => {
+      if (!totalCount) return 0
+
+      return Number(((targetCount / totalCount) * 100).toFixed(1))
+    }
+
     // report_waiting_hidden은 리포트 대기 카드 노출 중 document.hidden === true가 된 경우 수집된다.
     // 탭 전환, 앱 전환, 창 최소화, 화면 잠금 등으로 대기 화면이 background 상태가 된 경우를 포함한다.
-    const calcWaitingHiddenRate = (start: number, hiddenCount: number) =>
-      start > 0 ? Number(((hiddenCount / start) * 100).toFixed(1)) : 0
+    const waitingHiddenRate = calcRate(counts.report_gen_start, counts.report_waiting_hidden)
 
-    const calcWaitingEarlyExitRate = (waitingSessionCount: number, earlyExitCount: number) => {
-      if (!waitingSessionCount) return 0
-
-      return Number(((earlyExitCount / waitingSessionCount) * 100).toFixed(1))
-    }
+    const waitingEarlyExitRate = calcRate(
+      counts.report_waiting_session,
+      counts.report_waiting_early_exit,
+    )
 
     const rankings: FrictionRanking[] = [
       {
@@ -193,7 +197,7 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
       {
         id: 3,
         title: '리포트 대기 중 화면 비활성화',
-        dropOffRate: calcWaitingHiddenRate(counts.report_gen_start, counts.report_waiting_hidden),
+        dropOffRate: waitingHiddenRate,
       },
       {
         id: 4,
@@ -204,10 +208,7 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
       {
         id: 5,
         title: '리포트 대기 중 초단기 이탈',
-        dropOffRate: calcWaitingEarlyExitRate(
-          counts.report_waiting_session,
-          counts.report_waiting_early_exit,
-        ),
+        dropOffRate: waitingEarlyExitRate,
         rateLabel: '이탈률',
       },
     ]
