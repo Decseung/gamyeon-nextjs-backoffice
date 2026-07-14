@@ -137,6 +137,8 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
                 'report_gen_start',
                 'report_gen_complete',
                 'report_waiting_hidden',
+                'report_waiting_session',
+                'report_waiting_early_exit',
               ],
             },
           },
@@ -151,12 +153,15 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
       report_gen_start: 0,
       report_gen_complete: 0,
       report_waiting_hidden: 0,
+      report_waiting_session: 0,
+      report_waiting_early_exit: 0,
     }
 
     response.rows?.forEach((row) => {
       const eventName = row.dimensionValues?.[0].value as keyof typeof counts
+
       if (counts[eventName] !== undefined) {
-        counts[eventName] = Number(row.metricValues?.[0].value)
+        counts[eventName] = Number(row.metricValues?.[0].value ?? 0)
       }
     })
 
@@ -164,10 +169,20 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
     const calcDropOff = (start: number, complete: number) =>
       start > 0 ? Number((((start - complete) / start) * 100).toFixed(1)) : 0
 
+    const calcRate = (totalCount: number, targetCount: number) => {
+      if (!totalCount) return 0
+
+      return Number(((targetCount / totalCount) * 100).toFixed(1))
+    }
+
     // report_waiting_hidden은 리포트 대기 카드 노출 중 document.hidden === true가 된 경우 수집된다.
     // 탭 전환, 앱 전환, 창 최소화, 화면 잠금 등으로 대기 화면이 background 상태가 된 경우를 포함한다.
-    const calcWaitingHiddenRate = (start: number, hiddenCount: number) =>
-      start > 0 ? Number(((hiddenCount / start) * 100).toFixed(1)) : 0
+    const waitingHiddenRate = calcRate(counts.report_gen_start, counts.report_waiting_hidden)
+
+    const waitingEarlyExitRate = calcRate(
+      counts.report_waiting_session,
+      counts.report_waiting_early_exit,
+    )
 
     const rankings: FrictionRanking[] = [
       {
@@ -183,7 +198,7 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
       {
         id: 3,
         title: '리포트 대기 중 화면 비활성화',
-        dropOffRate: calcWaitingHiddenRate(counts.report_gen_start, counts.report_waiting_hidden),
+        dropOffRate: waitingHiddenRate,
       },
       {
         id: 4,
@@ -191,7 +206,12 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
         dropOffRate: rageClickRate,
         rateLabel: '마찰률',
       },
-      // 나중에 초단기 이탈(id: 5)도 추가 예정
+      {
+        id: 5,
+        title: '리포트 대기 중 초단기 이탈',
+        dropOffRate: waitingEarlyExitRate,
+        rateLabel: '이탈률',
+      },
     ]
 
     return rankings.sort((a, b) => b.dropOffRate - a.dropOffRate).slice(0, 3)

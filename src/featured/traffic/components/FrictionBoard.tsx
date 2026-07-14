@@ -17,6 +17,8 @@ const getUxDesc = (title: string) => {
   if (title.includes('화면 비활성화'))
     return '리포트 대기 중 다른 탭/앱 전환 또는 창 최소화로 대기 화면이 비활성화됨'
   if (title.includes('분노의 클릭')) return 'AI 리포트 발행 대기 중 반복 클릭이 발생'
+  if (title.includes('초단기 이탈'))
+    return '분석중 카드 노출 후 10초 이내에 사용자가 서비스 내부 다른 페이지로 이동한 비율'
   return '화면 대기 중 사용자가 피로도를 느껴 이탈했습니다.'
 }
 
