@@ -14,4 +14,11 @@ export type FrictionRanking = {
   id: number
   title: string
   dropOffRate: number
+  rateLabel?: '이탈률' | '마찰률'
+}
+
+export type EventCountData = {
+  eventName: string
+  eventCount: number
+  percentage: number
 }

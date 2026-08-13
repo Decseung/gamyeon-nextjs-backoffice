@@ -1,5 +1,5 @@
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
-import { FrictionRanking } from '../types/index'
+import { EventCountData, FrictionRanking } from '../types/index'
 
 const privateKey = process.env.GA_PRIVATE_KEY?.replace(/\\n/g, '\n')
 
@@ -11,11 +11,14 @@ const client = new BetaAnalyticsDataClient({
 })
 
 const propertyId = process.env.GA_PROPERTY_ID
+const gaDateRanges = [{ startDate: '30daysAgo', endDate: 'today' }]
+// report_id별 이벤트 존재 여부를 계산하기 위해 충분히 넉넉한 row 수로 조회
+const GA_REPORT_ROW_LIMIT = 10000
 
 export async function getFirstUserChannel() {
   const [data] = await client.runReport({
     property: `properties/${propertyId}`,
-    dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+    dateRanges: gaDateRanges,
     dimensions: [{ name: 'firstUserDefaultChannelGroup' }],
     metrics: [{ name: 'totalUsers' }],
   })
@@ -28,7 +31,7 @@ export async function getFirstUserChannel() {
 export async function getPagePerformance() {
   const [data] = await client.runReport({
     property: `properties/${propertyId}`,
-    dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+    dateRanges: gaDateRanges,
     dimensions: [{ name: 'pagePath' }],
     metrics: [
       { name: 'screenPageViews' },
@@ -52,45 +55,134 @@ export async function getPagePerformance() {
   }))
 }
 
-// 이탈 랭킹 서비스 함수 추가 - GA4 이벤트 데이터를 기반으로 마찰 지수 계산
-export async function getFrictionIndex(): Promise<FrictionRanking[]> {
+export async function getSurvivalRate(): Promise<EventCountData[]> {
   try {
-    const [response] = await client.runReport({
+    const [data] = await client.runReport({
       property: `properties/${propertyId}`,
-      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-      dimensions: [{ name: 'eventName' }],
+      dateRanges: [{ startDate: '5daysAgo', endDate: 'today' }],
+      dimensions: [{ name: 'eventName' }, { name: 'customEvent:question_number' }],
       metrics: [{ name: 'eventCount' }],
       dimensionFilter: {
         filter: {
           fieldName: 'eventName',
           inListFilter: {
             values: [
-              'question_gen_start',
-              'question_gen_complete',
-              'report_gen_start',
-              'report_gen_complete',
+              'open_interview_modal', // setup - 모달 진입
+              'complete_title_input', // setup - 1단계 제목 입력
+              'enter_upload_step', // setup - 2단계 업로드 진입
+              'upload_s3_success', // setup - 2단계 완수
+              'request_cam_permission', // setup - 3단계
+              'request_mic_permission', // setup - 4단계
+              'start_interview', // interview - 인터뷰 시작
+              'complete_answer', // interview - 질문 답변
+              'complete_interview', // interview - 인터뷰 종료
             ],
           },
         },
       },
     })
 
+    const aggregatedMap = new Map<string, number>()
+    data.rows?.forEach((row) => {
+      const eventName = row.dimensionValues?.[0].value ?? 'unknown'
+      const questionNum = row.dimensionValues?.[1].value ?? 'unknown'
+      const rawValue = Number(row.metricValues?.[0].value ?? 0)
+
+      const uniqueKey =
+        eventName === 'complete_answer' && questionNum !== '(not set)'
+          ? `${eventName}-${questionNum}`
+          : eventName
+      const valueSum = aggregatedMap.get(uniqueKey) || 0
+      aggregatedMap.set(uniqueKey, valueSum + rawValue)
+    })
+
+    const totalCount = Array.from(aggregatedMap.values()).reduce((acc, cur) => acc + cur, 0)
+    const formattedRows = Array.from(aggregatedMap.entries()).map(([eventName, eventCount]) => ({
+      eventName,
+      eventCount,
+      percentage: totalCount > 0 ? Number(((eventCount / totalCount) * 100).toFixed(1)) : 0,
+    }))
+    if (formattedRows.length > 0) {
+      console.log('[GA4-API] 이벤트 단계별 생존율 데이터')
+      console.table(formattedRows)
+    } else {
+      console.log('[GA4-API] 기간 내에 수집된 데이터가 없습니다.')
+    }
+    return formattedRows
+  } catch (error) {
+    console.error('GA4 단계별 생존율 데이터 호출 에러:', error)
+    return [] as EventCountData[]
+  }
+}
+
+// 이탈 랭킹 서비스 함수 추가 - GA4 이벤트 데이터를 기반으로 마찰 지수 계산
+export async function getFrictionIndex(): Promise<FrictionRanking[]> {
+  try {
+    const [
+      [response], // client.runReport 결과 배열에서 response 꺼냄
+      rageClickRate, // getRageClickFrictionRate 결과 숫자
+    ] = await Promise.all([
+      client.runReport({
+        property: `properties/${propertyId}`,
+        dateRanges: gaDateRanges,
+        dimensions: [{ name: 'eventName' }],
+        metrics: [{ name: 'eventCount' }],
+        dimensionFilter: {
+          filter: {
+            fieldName: 'eventName',
+            inListFilter: {
+              values: [
+                'question_gen_start',
+                'question_gen_complete',
+                'report_gen_start',
+                'report_gen_complete',
+                'report_waiting_hidden',
+                'report_waiting_session',
+                'report_waiting_early_exit',
+              ],
+            },
+          },
+        },
+      }),
+      getRageClickFrictionRate(),
+    ])
+
     const counts = {
       question_gen_start: 0,
       question_gen_complete: 0,
       report_gen_start: 0,
       report_gen_complete: 0,
+      report_waiting_hidden: 0,
+      report_waiting_session: 0,
+      report_waiting_early_exit: 0,
     }
 
     response.rows?.forEach((row) => {
       const eventName = row.dimensionValues?.[0].value as keyof typeof counts
+
       if (counts[eventName] !== undefined) {
-        counts[eventName] = Number(row.metricValues?.[0].value)
+        counts[eventName] = Number(row.metricValues?.[0].value ?? 0)
       }
     })
 
+    // 기존 계산식 (시작 대비 완료율로 이탈 계산)
     const calcDropOff = (start: number, complete: number) =>
       start > 0 ? Number((((start - complete) / start) * 100).toFixed(1)) : 0
+
+    const calcRate = (totalCount: number, targetCount: number) => {
+      if (!totalCount) return 0
+
+      return Number(((targetCount / totalCount) * 100).toFixed(1))
+    }
+
+    // report_waiting_hidden은 리포트 대기 카드 노출 중 document.hidden === true가 된 경우 수집된다.
+    // 탭 전환, 앱 전환, 창 최소화, 화면 잠금 등으로 대기 화면이 background 상태가 된 경우를 포함한다.
+    const waitingHiddenRate = calcRate(counts.report_gen_start, counts.report_waiting_hidden)
+
+    const waitingEarlyExitRate = calcRate(
+      counts.report_waiting_session,
+      counts.report_waiting_early_exit,
+    )
 
     const rankings: FrictionRanking[] = [
       {
@@ -103,12 +195,81 @@ export async function getFrictionIndex(): Promise<FrictionRanking[]> {
         title: '면접 후 AI 리포트 분석',
         dropOffRate: calcDropOff(counts.report_gen_start, counts.report_gen_complete),
       },
+      {
+        id: 3,
+        title: '리포트 대기 중 화면 비활성화',
+        dropOffRate: waitingHiddenRate,
+      },
+      {
+        id: 4,
+        title: '리포트 대기 중 분노의 클릭',
+        dropOffRate: rageClickRate,
+        rateLabel: '마찰률',
+      },
+      {
+        id: 5,
+        title: '리포트 대기 중 초단기 이탈',
+        dropOffRate: waitingEarlyExitRate,
+        rateLabel: '이탈률',
+      },
     ]
 
-    return rankings.sort((a, b) => b.dropOffRate - a.dropOffRate)
+    return rankings.sort((a, b) => b.dropOffRate - a.dropOffRate).slice(0, 3)
   } catch (error) {
     // 3. 에러 발생 시 로그를 남기고 빈 배열을 반환해 UI 렌더링 중단을 방지합니다
     console.error('GA4 마찰 지수 데이터 호출 에러:', error)
     return []
+  }
+}
+
+// AI 리포트 대기 report_id 중 분노의 클릭이 발생한 report_id 비율 계산
+export async function getRageClickFrictionRate() {
+  try {
+    const [response] = await client.runReport({
+      property: `properties/${propertyId}`,
+      dateRanges: gaDateRanges,
+      dimensions: [{ name: 'eventName' }, { name: 'customEvent:report_id' }],
+      // eventCount 값은 사용하지 않고, eventName + report_id 조합의 존재 여부만 distinct 계산에 사용
+      metrics: [{ name: 'eventCount' }],
+      dimensionFilter: {
+        filter: {
+          fieldName: 'eventName',
+          inListFilter: {
+            values: ['report_waiting_session', 'report_waiting_rage_click'],
+          },
+        },
+      },
+      // eventName + report_id 조합 row를 최대 10,000개까지 조회해 distinct report_id 계산 누락을 줄임
+      limit: GA_REPORT_ROW_LIMIT,
+    })
+
+    const waitingReportIds = new Set<string>()
+    const rageClickReportIds = new Set<string>()
+
+    response.rows?.forEach((row) => {
+      const eventName = row.dimensionValues?.[0].value
+      const reportId = row.dimensionValues?.[1].value
+
+      if (!reportId || reportId === '(not set)') return
+
+      if (eventName === 'report_waiting_session') {
+        waitingReportIds.add(reportId)
+      }
+
+      if (eventName === 'report_waiting_rage_click') {
+        rageClickReportIds.add(reportId)
+      }
+    })
+
+    const rageClickedWaitingReportCount = [...waitingReportIds].filter((reportId) =>
+      rageClickReportIds.has(reportId),
+    ).length
+
+    return waitingReportIds.size > 0
+      ? Number(((rageClickedWaitingReportCount / waitingReportIds.size) * 100).toFixed(1))
+      : 0
+  } catch (error) {
+    console.error('GA4 리포트 대기 분노의클릭 마찰률 데이터 호출 에러:', error)
+    return 0
   }
 }

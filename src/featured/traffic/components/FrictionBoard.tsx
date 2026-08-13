@@ -14,6 +14,11 @@ const getUxDesc = (title: string) => {
   if (title.includes('질문 생성')) return '질문 생성 대기 중 지루함을 느껴 뒤로가기 또는 이탈 발생'
   if (title.includes('리포트 분석'))
     return '분석 중 화면이 멈춘 것으로 오해하여 새로고침 또는 이탈 발생'
+  if (title.includes('화면 비활성화'))
+    return '리포트 대기 중 다른 탭/앱 전환 또는 창 최소화로 대기 화면이 비활성화됨'
+  if (title.includes('분노의 클릭')) return 'AI 리포트 발행 대기 중 반복 클릭이 발생'
+  if (title.includes('초단기 이탈'))
+    return '분석중 카드 노출 후 10초 이내에 사용자가 서비스 내부 다른 페이지로 이동한 비율'
   return '화면 대기 중 사용자가 피로도를 느껴 이탈했습니다.'
 }
 
@@ -22,10 +27,9 @@ export function FrictionBoard({ data }: FrictionBoardProps) {
     <div className="border-border bg-card flex h-full flex-col rounded-2xl border p-6">
       {/* 헤더 영역 */}
       <div className="mb-6 shrink-0">
-        <h2 className="text-foreground text-xl font-bold">UX 마찰 랭킹 리스트</h2>
+        <h2 className="text-foreground text-xl font-bold">AI 대기 구간 유저 마찰 지표 Top 3</h2>
         <p className="text-muted-foreground mt-1.5 text-sm break-keep">
-          가장 마찰(이탈)이 심한 화면을 순위제로 노출하여, 다음 스프린트의 최우선 해결 과제로
-          삼습니다.
+          가장 이탈이 심한 화면을 순위로 노출하여, 다음 스프린트의 최우선 해결 과제로 삼습니다.
         </p>
       </div>
 
@@ -78,7 +82,7 @@ export function FrictionBoard({ data }: FrictionBoardProps) {
                   className={`ml-3 flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-bold ${badgeClass}`}
                 >
                   <Icon className="h-3.5 w-3.5" aria-hidden="true" strokeWidth={2.5} />
-                  {stat.dropOffRate}% 이탈률
+                  {stat.dropOffRate}% {stat.rateLabel ?? '이탈률'}
                 </div>
               </motion.div>
             )
